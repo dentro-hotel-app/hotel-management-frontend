@@ -33,9 +33,10 @@ const Checkout = () => {
 					setIsLoading(false)
 				})
 				.catch((error) => {
-					setError(error)
+					setError(error.message || "Failed to load room")
 					setIsLoading(false)
 				})
+				
 		}, 1000)
 	}, [roomId])
 
@@ -47,7 +48,7 @@ const Checkout = () => {
 						{isLoading ? (
 							<p>Loading room information...</p>
 						) : error ? (
-							<p>{error}</p>
+							<p className="text-danger">{error?.message || String(error)}</p>
 						) : (
 							<div className="room-info">
 								<img
@@ -63,7 +64,7 @@ const Checkout = () => {
 										</tr>
 										<tr>
 											<th>Price per night:</th>
-											<td>${roomInfo.roomPrice}</td>
+											<td>₹{roomInfo.roomPrice}</td>
 										</tr>
 										<tr>
 											<th>Room Service:</th>
@@ -99,7 +100,7 @@ const Checkout = () => {
 						)}
 					</div>
 					<div className="col-md-8">
-						<BookingForm />
+						<BookingForm roomPrice={roomInfo.roomPrice} />
 					</div>
 				</div>
 			</section>

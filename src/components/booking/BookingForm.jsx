@@ -1,254 +1,228 @@
-import React, { useEffect } from "react"
-import moment from "moment"
-import { useState } from "react"
-import { Form, FormControl, Button } from "react-bootstrap"
-import BookingSummary from "./BookingSummary"
-import { bookRoom, getRoomById } from "../utils/ApiFunctions"
+import React, { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { useAuth } from "../auth/AuthProvider"
+import DatePicker from "react-datepicker"
+import "react-datepicker/dist/react-datepicker.css"
+import moment from "moment"
+import { Form, FormControl } from "react-bootstrap"
+import BookingSummary from "./BookingSummary"
+import { bookRoom, getBookedDates } from "../utils/ApiFunctions"
 
-const BookingForm = () => {
-	const [validated, setValidated] = useState(false)
-	const [isSubmitted, setIsSubmitted] = useState(false)
-	const [errorMessage, setErrorMessage] = useState("")
-	const [roomPrice, setRoomPrice] = useState(0)
+const BookingForm = ({ roomPrice }) => {
+  const { roomId } = useParams()
+  const navigate = useNavigate()
 
-const currentUser = localStorage.getItem("userId")
+  const [validated, setValidated] = useState(false)
+  const [isSubmitted, setIsSubmitted] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
+  const [bookedRanges, setBookedRanges] = useState([])
 
-	const [booking, setBooking] = useState({
-		guestFullName: "",
-		guestEmail: currentUser,
-		checkInDate: "",
-		checkOutDate: "",
-		numOfAdults: "",
-		numOfChildren: ""
-	})
+  const currentUser = localStorage.getItem("userId")
 
-	const { roomId } = useParams()
-	const navigate = useNavigate()
+  const [booking, setBooking] = useState({
+    guestFullName: "",
+    guestEmail: currentUser,
+    checkInDate: "",
+    checkOutDate: "",
+    numOfAdults: "",
+    numOfChildren: ""
+  })
 
-	const handleInputChange = (e) => {
-		const { name, value } = e.target
-		setBooking({ ...booking, [name]: value })
-		setErrorMessage("")
-	}
+  // Fetch Booked Dates
+  useEffect(() => {
+    if (!roomId) return
 
+    console.log("Fetching booked dates for room:", roomId)
+    getBookedDates(roomId)
+      .then(data => {
+        console.log("Booked dates response:", data)
+        const formatted = data.map(range => ({
+          start: new Date(range.start),
+          end: new Date(range.end)
+        }))
+        setBookedRanges(formatted)
+      })
+      .catch(err => console.log("Error fetching booked dates:", err))
+  }, [roomId])
 
-	const getRoomPriceById = async (roomId) => {
-		try {
-			const response = await getRoomById(roomId)
-			setRoomPrice(response.roomPrice)
-		} catch (error) {
-			throw new Error(error)
-		}
-	}
+  // Disable unavailable dates
+  const isDateDisabled = (date) =>
+    bookedRanges.some(range => date >= range.start && date <= range.end)
 
-	useEffect(() => {
-		getRoomPriceById(roomId)
-	}, [roomId])
+  const handleInputChange = (e) => {
+    const { name, value } = e.target
+    setBooking({ ...booking, [name]: value })
+    setErrorMessage("")
+  }
 
-	const calculatePayment = () => {
-		const checkInDate = moment(booking.checkInDate)
-		const checkOutDate = moment(booking.checkOutDate)
-		const diffInDays = checkOutDate.diff(checkInDate, "days")
-		const paymentPerDay = roomPrice ? roomPrice : 0
-		return diffInDays * paymentPerDay
-	}
+  const calculatePayment = () => {
+    const checkIn = moment(booking.checkInDate)
+    const checkOut = moment(booking.checkOutDate)
+    const diff = checkOut.diff(checkIn, "days")
+    return diff * (roomPrice || 0)
+  }
 
-	const isGuestCountValid = () => {
-		const adultCount = parseInt(booking.numOfAdults)
-		const childrenCount = parseInt(booking.numOfChildren)
-		const totalCount = adultCount + childrenCount
-		return totalCount >= 1 && adultCount >= 1
-	}
+  const isGuestCountValid = () => {
+    const adultCount = parseInt(booking.numOfAdults) || 0
+    if (adultCount < 1) {
+      setErrorMessage("At least 1 adult is required.")
+      return false
+    }
+    return true
+  }
 
-	const isCheckOutDateValid = () => {
-		if (!moment(booking.checkOutDate).isSameOrAfter(moment(booking.checkInDate))) {
-			setErrorMessage("Check-out date must be after check-in date")
-			return false
-		} else {
-			setErrorMessage("")
-			return true
-		}
-	}
+  const isCheckOutDateValid = () => {
+    if (!moment(booking.checkOutDate).isAfter(moment(booking.checkInDate))) {
+      setErrorMessage("Check-out date must be after check-in date")
+      return false
+    }
+    return true
+  }
 
-	const handleSubmit = (e) => {
-		e.preventDefault()
-		const form = e.currentTarget
-		if (form.checkValidity() === false || !isGuestCountValid() || !isCheckOutDateValid()) {
-			e.stopPropagation()
-		} else {
-			setIsSubmitted(true)
-		}
-		setValidated(true)
-	}
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    const form = e.currentTarget
 
-	const handleFormSubmit = async () => {
-		try {
-			const confirmationCode = await bookRoom(roomId, booking)
-			setIsSubmitted(true)
-			navigate("/booking-success", { state: { message: confirmationCode } })
-		} catch (error) {
-			const errorMessage = error.message
-			console.log(errorMessage)
-			navigate("/booking-success", { state: { error: errorMessage } })
-		}
-	}
+    if (!form.checkValidity() || !isGuestCountValid() || !isCheckOutDateValid()) {
+      e.stopPropagation()
+      return
+    }
+    setIsSubmitted(true)
+    setValidated(true)
+  }
 
-	return (
-		<>
-			<div className="container mb-5">
-				<div className="row">
-					<div className="col-md-6">
-						<div className="card card-body mt-5">
-							<h4 className="card-title">Reserve Room</h4>
+  const handleFormSubmit = async () => {
+    try {
+      const response = await bookRoom(roomId, booking)
+      navigate("/booking-success", {
+        state: {
+          success: response.success,
+          message: response.message,
+          confirmationCode: response.confirmationCode,
+          bookingId: response.bookingId
+        }
+      })
+    } catch (error) {
+      navigate("/booking-success", {
+        state: {
+          success: false,
+          message: error.message
+        }
+      })
+    }
+  }
 
-							<Form noValidate validated={validated} onSubmit={handleSubmit}>
-								<Form.Group>
-									<Form.Label htmlFor="guestFullName" className="hotel-color">
-										Fullname
-									</Form.Label>
-									<FormControl
-										required
-										type="text"
-										id="guestFullName"
-										name="guestFullName"
-										value={booking.guestFullName}
-										placeholder="Enter your fullname"
-										onChange={handleInputChange}
-									/>
-									<Form.Control.Feedback type="invalid">
-										Please enter your fullname.
-									</Form.Control.Feedback>
-								</Form.Group>
+  return (
+    <div className="container mb-5">
+      <div className="row">
+        <div className="col-md-6">
+          <div className="card card-body mt-5">
+            <h4 className="card-title">Reserve Room</h4>
 
-								<Form.Group>
-									<Form.Label htmlFor="guestEmail" className="hotel-color">
-										Email
-									</Form.Label>
-									<FormControl
-										required
-										type="email"
-										id="guestEmail"
-										name="guestEmail"
-										value={booking.guestEmail}
-										placeholder="Enter your email"
-										onChange={handleInputChange}
-										disabled
-									/>
-									<Form.Control.Feedback type="invalid">
-										Please enter a valid email address.
-									</Form.Control.Feedback>
-								</Form.Group>
+            <Form noValidate validated={validated} onSubmit={handleSubmit}>
+              <Form.Group>
+                <Form.Label>Full name</Form.Label>
+                <FormControl
+                  required
+                  type="text"
+                  name="guestFullName"
+                  value={booking.guestFullName}
+                  placeholder="Enter your fullname"
+                  onChange={handleInputChange}
+                />
+              </Form.Group>
 
-								<fieldset style={{ border: "2px" }}>
-									<legend>Lodging Period</legend>
-									<div className="row">
-										<div className="col-6">
-											<Form.Label htmlFor="checkInDate" className="hotel-color">
-												Check-in date
-											</Form.Label>
-											<FormControl
-												required
-												type="date"
-												id="checkInDate"
-												name="checkInDate"
-												value={booking.checkInDate}
-												placeholder="check-in-date"
-												min={moment().format("MMM Do, YYYY")}
-												onChange={handleInputChange}
-											/>
-											<Form.Control.Feedback type="invalid">
-												Please select a check in date.
-											</Form.Control.Feedback>
-										</div>
+              <Form.Group>
+                <Form.Label>Email</Form.Label>
+                <FormControl
+                  required
+                  type="email"
+                  name="guestEmail"
+                  value={booking.guestEmail}
+                  disabled
+                />
+              </Form.Group>
 
-										<div className="col-6">
-											<Form.Label htmlFor="checkOutDate" className="hotel-color">
-												Check-out date
-											</Form.Label>
-											<FormControl
-												required
-												type="date"
-												id="checkOutDate"
-												name="checkOutDate"
-												value={booking.checkOutDate}
-												placeholder="check-out-date"
-												min={moment().format("MMM Do, YYYY")}
-												onChange={handleInputChange}
-											/>
-											<Form.Control.Feedback type="invalid">
-												Please select a check out date.
-											</Form.Control.Feedback>
-										</div>
-										{errorMessage && <p className="error-message text-danger">{errorMessage}</p>}
-									</div>
-								</fieldset>
+              <fieldset>
+                <legend>Lodging Period</legend>
+                <div className="row">
+                  <div className="col-6">
+                    <Form.Label>Check-in Date</Form.Label>
+                    <DatePicker
+                      selected={booking.checkInDate ? new Date(booking.checkInDate) : null}
+                      onChange={(date) =>
+                        setBooking({ ...booking, checkInDate: moment(date).format("YYYY-MM-DD") })
+                      }
+                      filterDate={(date) => !isDateDisabled(date)}
+                      className="form-control"
+                      minDate={new Date()}
+                    />
+                  </div>
 
-								<fieldset style={{ border: "2px" }}>
-									<legend>Number of Guest</legend>
-									<div className="row">
-										<div className="col-6">
-											<Form.Label htmlFor="numOfAdults" className="hotel-color">
-												Adults
-											</Form.Label>
-											<FormControl
-												required
-												type="number"
-												id="numOfAdults"
-												name="numOfAdults"
-												value={booking.numOfAdults}
-												min={1}
-												placeholder="0"
-												onChange={handleInputChange}
-											/>
-											<Form.Control.Feedback type="invalid">
-												Please select at least 1 adult.
-											</Form.Control.Feedback>
-										</div>
-										<div className="col-6">
-											<Form.Label htmlFor="numOfChildren" className="hotel-color">
-												Children
-											</Form.Label>
-											<FormControl
-												required
-												type="number"
-												id="numOfChildren"
-												name="numOfChildren"
-												value={booking.numOfChildren}
-												placeholder="0"
-												min={0}
-												onChange={handleInputChange}
-											/>
-											<Form.Control.Feedback type="invalid">
-												Select 0 if no children
-											</Form.Control.Feedback>
-										</div>
-									</div>
-								</fieldset>
+                  <div className="col-6">
+                    <Form.Label>Check-out Date</Form.Label>
+                    <DatePicker
+                      selected={booking.checkOutDate ? new Date(booking.checkOutDate) : null}
+                      onChange={(date) =>
+                        setBooking({ ...booking, checkOutDate: moment(date).format("YYYY-MM-DD") })
+                      }
+                      filterDate={(date) => !isDateDisabled(date)}
+                      className="form-control"
+                      minDate={booking.checkInDate ? new Date(booking.checkInDate) : new Date()}
+                    />
+                  </div>
 
-								<div className="fom-group mt-2 mb-2">
-									<button type="submit" className="btn btn-hotel">
-										Continue
-									</button>
-								</div>
-							</Form>
-						</div>
-					</div>
+                  {errorMessage && <p className="text-danger mt-1">{errorMessage}</p>}
+                </div>
+              </fieldset>
 
-					<div className="col-md-4">
-						{isSubmitted && (
-							<BookingSummary
-								booking={booking}
-								payment={calculatePayment()}
-								onConfirm={handleFormSubmit}
-								isFormValid={validated}
-							/>
-						)}
-					</div>
-				</div>
-			</div>
-		</>
-	)
+              <fieldset>
+                <legend>Number of Guests</legend>
+                <div className="row">
+                  <div className="col-6">
+                    <Form.Label>Adults</Form.Label>
+                    <FormControl
+                      required
+                      type="number"
+                      name="numOfAdults"
+                      value={booking.numOfAdults}
+                      min={1}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+
+                  <div className="col-6">
+                    <Form.Label>Children</Form.Label>
+                    <FormControl
+                      type="number"
+                      name="numOfChildren"
+                      value={booking.numOfChildren}
+                      min={0}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
+              </fieldset>
+
+              <button type="submit" className="btn btn-hotel mt-3">
+                Continue
+              </button>
+            </Form>
+          </div>
+        </div>
+
+        <div className="col-md-4">
+          {isSubmitted && (
+            <BookingSummary
+              booking={booking}
+              payment={calculatePayment()}
+              onConfirm={handleFormSubmit}
+              isFormValid={validated}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  )
 }
+
 export default BookingForm

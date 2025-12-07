@@ -4,22 +4,29 @@ import { Link } from "react-router-dom"
 import { Card, Carousel, Col, Container, Row } from "react-bootstrap"
 
 const RoomCarousel = () => {
-	const [rooms, setRooms] = useState([{ id: "", roomType: "", roomPrice: "", photo: "" }])
+	//const [rooms, setRooms] = useState([{ id: "", roomType: "", roomPrice: "", photo: "" }])
+	const [rooms, setRooms] = useState([]);
 	const [errorMessage, setErrorMessage] = useState("")
 	const [isLoading, setIsLoading] = useState(false)
 
 	useEffect(() => {
-		setIsLoading(true)
+		setIsLoading(true);
 		getAllRooms()
-			.then((data) => {
-				setRooms(data)
-				setIsLoading(false)
-			})
-			.catch((error) => {
-				setErrorMessage(error.message)
-				setIsLoading(false)
-			})
-	}, [])
+		  .then((data) => {
+			if (Array.isArray(data)) {
+			  setRooms(data);
+			} else if (data && Array.isArray(data.rooms)) {
+			  setRooms(data.rooms); // depending on your backend shape
+			} else {
+			  setRooms([]);
+			}
+			setIsLoading(false);
+		  })
+		  .catch((error) => {
+			setErrorMessage(error.message);
+			setIsLoading(false);
+		  });
+	  }, []);
 
 	if (isLoading) {
 		return <div className="mt-5">Loading rooms....</div>
@@ -45,7 +52,11 @@ const RoomCarousel = () => {
 											<Link to={`/book-room/${room.id}`}>
 												<Card.Img
 													variant="top"
-													src={`data:image/png;base64, ${room.photo}`}
+													src={
+													  room.photo
+														? `data:image/png;base64,${room.photo}`
+														: "/default-room.jpg" // or any placeholder image
+													}
 													alt="Room Photo"
 													className="w-100"
 													style={{ height: "200px" }}

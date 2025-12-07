@@ -11,15 +11,23 @@ const Room = () => {
 	const [isLoading, setIsLoading] = useState(false)
 	const [currentPage, setCurrentPage] = useState(1)
 	const [roomsPerPage] = useState(6)
-	const [filteredData, setFilteredData] = useState([{ id: "" }])
+	const [filteredData, setFilteredData] = useState([])
 
 	useEffect(() => {
 		setIsLoading(true)
 		getAllRooms()
 			.then((data) => {
-				setData(data)
-				setFilteredData(data)
-				setIsLoading(false)
+				if (Array.isArray(data)) {
+					setData(data);
+					setFilteredData(data);
+				  } else if (data && Array.isArray(data.rooms)) {
+					setData(data.rooms);
+					setFilteredData(data.rooms);
+				  } else {
+					setData([]);
+					setFilteredData([]);
+				  }
+				  setIsLoading(false);
 			})
 			.catch((error) => {
 				setError(error.message)

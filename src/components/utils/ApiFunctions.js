@@ -1,9 +1,9 @@
 import axios from "axios"
 
 export const api = axios.create({
-	//baseURL: "http://localhost:9192"
+	baseURL: "http://localhost:9192"
 	//baseURL: "http://3.108.236.74:9192"
-	baseURL: import.meta.env.VITE_API_BASE_URL
+	//baseURL: import.meta.env.VITE_API_BASE_URL
 })
 
 export const getHeader = () => {
@@ -86,16 +86,17 @@ export async function getRoomById(roomId) {
 /* This function saves a new booking to the databse */
 export async function bookRoom(roomId, booking) {
 	try {
-		const response = await api.post(`/bookings/room/${roomId}/booking`, booking)
-		return response.data
+	  const response = await api.post(`/bookings/room/${roomId}/booking`, booking)
+	  return response.data
 	} catch (error) {
-		if (error.response && error.response.data) {
-			throw new Error(error.response.data)
-		} else {
-			throw new Error(`Error booking room : ${error.message}`)
-		}
+	  if (error.response && error.response.data) {
+		// throw only the backend message string
+		throw new Error(error.response.data.message)
+	  } else {
+		throw new Error(`Error booking room : ${error.message}`)
+	  }
 	}
-}
+  }
 
 /* This function gets alll bokings from the database */
 export async function getAllBookings() {
@@ -219,3 +220,8 @@ export async function getBookingsByUserId(userId, token) {
 		throw new Error("Failed to fetch bookings")
 	}
 }
+
+export async function getBookedDates(roomId) {
+	const response = await api.get(`/bookings/room/${roomId}/booked-dates`);
+	return response.data;
+  }
