@@ -1,9 +1,9 @@
 import axios from "axios"
 
 export const api = axios.create({
-	baseURL: "http://localhost:9192"
+	//baseURL: "http://localhost:9192"
 	//baseURL: "http://3.108.236.74:9192"
-	//baseURL: import.meta.env.VITE_API_BASE_URL
+	baseURL: import.meta.env.VITE_API_BASE_URL
 })
 
 export const getHeader = () => {
