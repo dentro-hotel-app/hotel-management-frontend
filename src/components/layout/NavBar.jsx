@@ -36,7 +36,7 @@ const NavBar = () => {
           <ul className="navbar-nav me-auto my-2 my-lg-0 navbar-nav-scroll">
             <li className="nav-item">
               <NavLink className="nav-link" to={"/browse-all-rooms"}>
-                Browse all rooms
+              Medical Stays
               </NavLink>
             </li>
 

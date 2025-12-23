@@ -1,113 +1,115 @@
 import React, { useEffect, useState } from "react"
 import BookingForm from "./BookingForm"
 import {
-	FaUtensils,
-	FaWifi,
-	FaTv,
-	FaWineGlassAlt,
-	FaParking,
-	FaCar,
-	FaTshirt
+  FaUtensils,
+  FaWifi,
+  FaTv,
+  FaWineGlassAlt,
+  FaParking,
+  FaCar,
+  FaTshirt
 } from "react-icons/fa"
-
 import { useParams } from "react-router-dom"
 import { getRoomById } from "../utils/ApiFunctions"
 import RoomCarousel from "../common/RoomCarousel"
 
 const Checkout = () => {
-	const [error, setError] = useState(null)
-	const [isLoading, setIsLoading] = useState(true)
-	const [roomInfo, setRoomInfo] = useState({
-		photo: "",
-		roomType: "",
-		roomPrice: ""
-	})
+  const { roomId } = useParams()
 
-	const { roomId } = useParams()
+  const [roomInfo, setRoomInfo] = useState({
+    roomType: "",
+    roomPrice: "",
+    photos: []
+  })
 
-	useEffect(() => {
-		setTimeout(() => {
-			getRoomById(roomId)
-				.then((response) => {
-					setRoomInfo(response)
-					setIsLoading(false)
-				})
-				.catch((error) => {
-					setError(error.message || "Failed to load room")
-					setIsLoading(false)
-				})
-				
-		}, 1000)
-	}, [roomId])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState("")
 
-	return (
-		<div>
-			<section className="container">
-				<div className="row">
-					<div className="col-md-4 mt-5 mb-5">
-						{isLoading ? (
-							<p>Loading room information...</p>
-						) : error ? (
-							<p className="text-danger">{error?.message || String(error)}</p>
-						) : (
-							<div className="room-info">
-								<img
-									src={`data:image/png;base64,${roomInfo.photo}`}
-									alt="Room photo"
-									style={{ width: "100%", height: "200px" }}
-								/>
-								<table className="table table-bordered">
-									<tbody>
-										<tr>
-											<th>Room Type:</th>
-											<td>{roomInfo.roomType}</td>
-										</tr>
-										<tr>
-											<th>Price per night:</th>
-											<td>₹{roomInfo.roomPrice}</td>
-										</tr>
-										<tr>
-											<th>Room Service:</th>
-											<td>
-												<ul className="list-unstyled">
-													<li>
-														<FaWifi /> Wifi
-													</li>
-													<li>
-														<FaTv /> Netfilx Premium
-													</li>
-													<li>
-														<FaUtensils /> Breakfast
-													</li>
-													<li>
-														<FaWineGlassAlt /> Mini bar refreshment
-													</li>
-													<li>
-														<FaCar /> Car Service
-													</li>
-													<li>
-														<FaParking /> Parking Space
-													</li>
-													<li>
-														<FaTshirt /> Laundry
-													</li>
-												</ul>
-											</td>
-										</tr>
-									</tbody>
-								</table>
-							</div>
-						)}
-					</div>
-					<div className="col-md-8">
-						<BookingForm roomPrice={roomInfo.roomPrice} />
-					</div>
-				</div>
-			</section>
-			<div className="container">
-				<RoomCarousel />
-			</div>
-		</div>
-	)
+  /* ===================== FETCH ROOM ===================== */
+
+  useEffect(() => {
+    const fetchRoom = async () => {
+      try {
+        const data = await getRoomById(roomId)
+
+        setRoomInfo({
+          roomType: data.roomType,
+          roomPrice: data.roomPrice,
+          photos: Array.isArray(data.photos) ? data.photos : []
+        })
+      } catch (err) {
+        setError(err.message || "Failed to load room details")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchRoom()
+  }, [roomId])
+
+  /* ===================== UI STATES ===================== */
+
+  if (isLoading) {
+    return <p className="text-center mt-5">Loading room information...</p>
+  }
+
+  if (error) {
+    return <p className="text-center text-danger mt-5">{error}</p>
+  }
+
+  /* ===================== UI ===================== */
+
+  return (
+    <div>
+      <section className="container mt-5">
+        <div className="row">
+
+          {/* ===================== LEFT: ROOM INFO ===================== */}
+          <div className="col-md-4 mb-5">
+            <div className="room-info">
+
+              {/* PHOTO CAROUSEL */}
+              <RoomCarousel photos={roomInfo.photos} />
+
+              <table className="table table-bordered mt-3">
+                <tbody>
+                  <tr>
+                    <th>Room Type</th>
+                    <td>{roomInfo.roomType}</td>
+                  </tr>
+                  <tr>
+                    <th>Price per night</th>
+                    <td>₹{roomInfo.roomPrice}</td>
+                  </tr>
+                  <tr>
+                    <th>Room Services</th>
+                    <td>
+                      <ul className="list-unstyled mb-0">
+                        <li><FaWifi /> Wifi</li>
+                        <li><FaTv /> Netflix Premium</li>
+                        <li><FaUtensils /> Breakfast</li>
+                        <li><FaWineGlassAlt /> Mini Bar</li>
+                        <li><FaCar /> Car Service</li>
+                        <li><FaParking /> Parking</li>
+                        <li><FaTshirt /> Laundry</li>
+                      </ul>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+            </div>
+          </div>
+
+          {/* ===================== RIGHT: BOOKING FORM ===================== */}
+          <div className="col-md-8">
+            <BookingForm roomPrice={roomInfo.roomPrice} />
+          </div>
+
+        </div>
+      </section>
+    </div>
+  )
 }
+
 export default Checkout

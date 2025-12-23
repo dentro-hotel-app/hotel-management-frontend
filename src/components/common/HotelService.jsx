@@ -42,6 +42,16 @@ const HotelService = () => {
 						<Card>
 							<Card.Body>
 								<Card.Title className="hotel-color">
+									<FaUtensils /> Hospital Nearby
+								</Card.Title>
+								<Card.Text>Located close to major hospitals for easy access.</Card.Text>
+							</Card.Body>
+						</Card>
+					</Col>
+					<Col>
+						<Card>
+							<Card.Body>
+								<Card.Title className="hotel-color">
 									<FaUtensils /> Breakfast
 								</Card.Title>
 								<Card.Text>Start your day with a delicious breakfast buffet.</Card.Text>
@@ -62,9 +72,9 @@ const HotelService = () => {
 						<Card>
 							<Card.Body>
 								<Card.Title className="hotel-color">
-									<FaCocktail /> Mini-bar
+									<FaCocktail />Daily housekeeping
 								</Card.Title>
-								<Card.Text>Enjoy a refreshing drink or snack from our in-room mini-bar.</Card.Text>
+								<Card.Text>Enjoy a clean and refreshing environment.</Card.Text>
 							</Card.Body>
 						</Card>
 					</Col>
@@ -75,6 +85,16 @@ const HotelService = () => {
 									<FaParking /> Parking
 								</Card.Title>
 								<Card.Text>Park your car conveniently in our on-site parking lot.</Card.Text>
+							</Card.Body>
+						</Card>
+					</Col>
+					<Col>
+						<Card>
+							<Card.Body>
+								<Card.Title className="hotel-color">
+									<FaParking /> Pharmacy nearby
+								</Card.Title>
+								<Card.Text>Find 24/7 pharmacy near by.</Card.Text>
 							</Card.Body>
 						</Card>
 					</Col>

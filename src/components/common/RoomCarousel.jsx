@@ -1,86 +1,98 @@
-import React, { useEffect, useState } from "react"
-import { getAllRooms } from "../utils/ApiFunctions"
-import { Link } from "react-router-dom"
-import { Card, Carousel, Col, Container, Row } from "react-bootstrap"
+import React from "react"
 
-const RoomCarousel = () => {
-	//const [rooms, setRooms] = useState([{ id: "", roomType: "", roomPrice: "", photo: "" }])
-	const [rooms, setRooms] = useState([]);
-	const [errorMessage, setErrorMessage] = useState("")
-	const [isLoading, setIsLoading] = useState(false)
+const RoomCarousel = ({ photos = [], carouselId }) => {
+  // Always work with a clean array
+  const safePhotos = Array.isArray(photos)
+    ? photos.filter(p => typeof p === "string" && p.trim().length > 0)
+    : []
 
-	useEffect(() => {
-		setIsLoading(true);
-		getAllRooms()
-		  .then((data) => {
-			if (Array.isArray(data)) {
-			  setRooms(data);
-			} else if (data && Array.isArray(data.rooms)) {
-			  setRooms(data.rooms); // depending on your backend shape
-			} else {
-			  setRooms([]);
-			}
-			setIsLoading(false);
-		  })
-		  .catch((error) => {
-			setErrorMessage(error.message);
-			setIsLoading(false);
-		  });
-	  }, []);
+  if (safePhotos.length === 0) {
+    return (
+      <div className="text-center text-muted py-3">
+        No room photos available
+      </div>
+    )
+  }
 
-	if (isLoading) {
-		return <div className="mt-5">Loading rooms....</div>
-	}
-	if (errorMessage) {
-		return <div className=" text-danger mb-5 mt-5">Error : {errorMessage}</div>
-	}
+  // Unique carousel ID (prevents conflicts)
+  const id =
+    carouselId || `room-carousel-${Math.random().toString(36).slice(2)}`
 
-	return (
-		<section className="bg-light mb-5 mt-5 shadow">
-			<Link to={"/browse-all-rooms"} className="hote-color text-center">
-				Browse all rooms
-			</Link>
+  return (
+    <div
+      id={id}
+      className="carousel slide mb-3"
+      data-bs-ride="carousel"
+    >
+      {/* ===================== INDICATORS ===================== */}
+      {safePhotos.length > 1 && (
+        <div className="carousel-indicators">
+          {safePhotos.map((_, index) => (
+            <button
+              key={index}
+              type="button"
+              data-bs-target={`#${id}`}
+              data-bs-slide-to={index}
+              className={index === 0 ? "active" : ""}
+              aria-current={index === 0 ? "true" : "false"}
+              aria-label={`Slide ${index + 1}`}
+            />
+          ))}
+        </div>
+      )}
 
-			<Container>
-				<Carousel indicators={false}>
-					{[...Array(Math.ceil(rooms.length / 4))].map((_, index) => (
-						<Carousel.Item key={index}>
-							<Row>
-								{rooms.slice(index * 4, index * 4 + 4).map((room) => (
-									<Col key={room.id} className="mb-4" xs={12} md={6} lg={3}>
-										<Card>
-											<Link to={`/book-room/${room.id}`}>
-												<Card.Img
-													variant="top"
-													src={
-													  room.photo
-														? `data:image/png;base64,${room.photo}`
-														: "/default-room.jpg" // or any placeholder image
-													}
-													alt="Room Photo"
-													className="w-100"
-													style={{ height: "200px" }}
-												/>
-											</Link>
-											<Card.Body>
-												<Card.Title className="hotel-color">{room.roomType}</Card.Title>
-												<Card.Title className="room-price">${room.roomPrice}/night</Card.Title>
-												<div className="flex-shrink-0">
-													<Link to={`/book-room/${room.id}`} className="btn btn-hotel btn-sm">
-														Book Now
-													</Link>
-												</div>
-											</Card.Body>
-										</Card>
-									</Col>
-								))}
-							</Row>
-						</Carousel.Item>
-					))}
-				</Carousel>
-			</Container>
-		</section>
-	)
+      {/* ===================== SLIDES ===================== */}
+      <div className="carousel-inner rounded">
+        {safePhotos.map((photo, index) => {
+          const src = photo.startsWith("http")
+            ? photo
+            : `data:image/jpeg;base64,${photo}`
+
+          return (
+            <div
+              key={index}
+              className={`carousel-item ${index === 0 ? "active" : ""}`}
+            >
+              <img
+                src={src}
+                className="d-block w-100"
+                alt={`Room ${index + 1}`}
+                loading="lazy"
+                style={{
+                  height: "260px",
+                  objectFit: "cover",
+                  borderRadius: "10px"
+                }}
+              />
+            </div>
+          )
+        })}
+      </div>
+
+      {/* ===================== CONTROLS ===================== */}
+      {safePhotos.length > 1 && (
+        <>
+          <button
+            className="carousel-control-prev"
+            type="button"
+            data-bs-target={`#${id}`}
+            data-bs-slide="prev"
+          >
+            <span className="carousel-control-prev-icon" />
+          </button>
+
+          <button
+            className="carousel-control-next"
+            type="button"
+            data-bs-target={`#${id}`}
+            data-bs-slide="next"
+          >
+            <span className="carousel-control-next-icon" />
+          </button>
+        </>
+      )}
+    </div>
+  )
 }
 
 export default RoomCarousel
